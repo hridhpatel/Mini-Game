@@ -1,85 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sea Level Rise Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #e0f7fa;
-      margin: 0;
-      padding: 0;
-    }
-    #map {
-      height: 100vh;
-      width: 100vw;
-      margin: 0;
-      padding: 0;
-    }
-    .leaflet-popup-content {
-      text-align: center;
-      color: #00796b;
-      font-size: 1.2em;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Emissions Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #e0f7fa;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+        }
+        #map {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            transition: opacity 0.5s ease;
+        }
+        .hidden {
+            display: none;
+        }
+        .slider-container, .summary {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            top: 20%; /* Positioned from the top */
+            left: 50%;
+            transform: translate(-50%, -20%);
+            z-index: 1000; /* Ensure it's above the map */
+            width: 80%; /* Adjust width for responsiveness */
+        }
+        .slider-row {
+            display: flex;
+            justify-content: space-around; /* Space sliders evenly */
+            align-items: center;
+            margin-bottom: 20px; /* Space below the slider row */
+        }
+        .leaflet-popup-content {
+            text-align: center;
+            color: #00796b;
+            font-size: 1.2em;
+        }
+        button {
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #00796b;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #005f4f;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            text-align: center; /* Center labels for better alignment */
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px; /* Space below sliders */
+        }
+        h3 {
+            margin-bottom: 20px;
+        }
+        .emoji {
+            font-size: 50px; /* Increase emoji size */
+            display: block; /* Make emojis block elements */
+            margin: 0 auto 10px; /* Center emojis and add spacing below */
+        }
+        .suggestions {
+            text-align: left;
+            margin-top: 20px;
+        }
+        .impact {
+            color: #ff9800; /* Orange color for impact messages */
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <div id="map"></div>
+    <div id="map"></div>
+    <div id="slider-container" class="hidden slider-container">
+        <h3>Explore Energy Options for <span id="country-name"></span></h3>
+        <div class="slider-row">
+            <div>
+                <span class="emoji">🌱</span>
+                <label for="green-farming">Green Farming</label>
+                <input type="range" id="green-farming" min="0" max="100" value="50"><span>%</span><br>
+            </div>
+            <div>
+                <span class="emoji">⛽</span>
+                <label for="fossil-fuels">Fossil Fuels</label>
+                <input type="range" id="fossil-fuels" min="0" max="100" value="50"><span>%</span><br>
+            </div>
+            <div>
+                <span class="emoji">☀️</span>
+                <label for="renewable-energy">Renewable Energy</label>
+                <input type="range" id="renewable-energy" min="0" max="100" value="50"><span>%</span><br>
+            </div>
+        </div>
+        <button id="summary-btn">Show Summary</button>
+    </div>
+    <div id="summary" class="hidden summary"></div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // Initialize the map centered on a location with a suitable zoom level
-    const map = L.map('map').setView([20, 0], 2); // Centered and zoomed out to show all markers
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map centered on a location with a suitable zoom level
+        const map = L.map('map').setView([20, 0], 2); // Centered and zoomed out to show all markers
 
-    // Add a tile layer (background)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+        // Add a tile layer (background) without grid lines
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-    // Sample Data for COGs including Saudi Arabia
-    const seaLevelData = [
-  { name: "Los Angeles", lat: 34.0522, lon: -118.2437, message: "In 2050, sea levels might rise by 1 meter! 🌊", color: "#ff5733" },
-  { name: "New York City", lat: 40.7128, lon: -74.0060, message: "In 2100, sea levels could rise by 2 meters! 🌊", color: "#33c1ff" },
-  { name: "Miami", lat: 25.7617, lon: -80.1918, message: "Miami could see a 1.5 meter rise by 2070! 🌊", color: "#33ff57" },
-  { name: "Bangkok", lat: 13.7563, lon: 100.5018, message: "Bangkok may face a 1.2 meter sea-level rise by 2060! 🌊", color: "#ff33e1" },
-  { name: "Jakarta", lat: -6.2088, lon: 106.8456, message: "Jakarta may see 1.8 meters of sea level rise by 2080! 🌊", color: "#e833ff" },
-  { name: "Sydney", lat: -33.8688, lon: 151.2093, message: "Sydney could experience a 1.5 meter rise by 2070! 🌊", color: "#ffdd33" },
-  { name: "Tokyo", lat: 35.6762, lon: 139.6503, message: "Tokyo might experience a 1 meter rise by 2050! 🌊", color: "#33ffae" },
-  { name: "Riyadh", lat: 24.7136, lon: 46.6753, message: "Sea level rise could affect Saudi Arabia by 2100! 🌊", color: "#3399ff" },
-  { name: "London", lat: 51.5074, lon: -0.1278, message: "London could see a 0.5 meter rise by 2050! 🌊", color: "#ff338f" },
-  { name: "Paris", lat: 48.8566, lon: 2.3522, message: "Paris could experience a 0.8 meter sea-level rise by 2080! 🌊", color: "#337fff" },
-  { name: "Cairo", lat: 30.0444, lon: 31.2357, message: "Cairo may face a 0.9 meter rise by 2070! 🌊", color: "#ff9933" },
-  { name: "Cape Town", lat: -33.9249, lon: 18.4241, message: "Sea level in Cape Town could rise by 1 meter by 2100! 🌊", color: "#3399ff" },
-  { name: "Mumbai", lat: 19.0760, lon: 72.8777, message: "Mumbai could see a 1.4 meter rise by 2070! 🌊", color: "#ff5733" },
-  { name: "Shanghai", lat: 31.2304, lon: 121.4737, message: "Shanghai may face a 1.2 meter sea-level rise by 2050! 🌊", color: "#33ff57" },
-  { name: "Buenos Aires", lat: -34.6037, lon: -58.3816, message: "Buenos Aires could see a 1.3 meter rise by 2100! 🌊", color: "#33c1ff" },
-  { name: "Rio de Janeiro", lat: -22.9068, lon: -43.1729, message: "Rio de Janeiro might experience a 1.6 meter rise by 2080! 🌊", color: "#ff33e1" },
-  { name: "Lagos", lat: 6.5244, lon: 3.3792, message: "Lagos could face a 1.7 meter rise by 2100! 🌊", color: "#e833ff" },
-  { name: "Mexico City", lat: 19.4326, lon: -99.1332, message: "Mexico City might experience a 1.5 meter rise by 2100! 🌊", color: "#ffdd33" },
-  { name: "Moscow", lat: 55.7558, lon: 37.6173, message: "Moscow could experience a 1 meter sea-level rise by 2100! 🌊", color: "#33ffae" },
-  { name: "Berlin", lat: 52.5200, lon: 13.4050, message: "Berlin might experience a 1.1 meter rise by 2050! 🌊", color: "#ff338f" },
-  { name: "Nairobi", lat: -1.2921, lon: 36.8219, message: "Nairobi may face a 1 meter sea-level rise by 2070! 🌊", color: "#3399ff" },
-  { name: "Lima", lat: -12.0464, lon: -77.0428, message: "Lima could see a 1.5 meter rise by 2100! 🌊", color: "#ff5733" },
-  { name: "Toronto", lat: 43.6510, lon: -79.3470, message: "Toronto might experience a 1 meter rise by 2050! 🌊", color: "#33ffae" },
-  { name: "Hong Kong", lat: 22.3193, lon: 114.1694, message: "Hong Kong could see a 1.8 meter rise by 2080! 🌊", color: "#e833ff" },
-  { name: "Beijing", lat: 39.9042, lon: 116.4074, message: "Beijing may face a 1.3 meter rise by 2100! 🌊", color: "#ff33e1" },
-  { name: "Seoul", lat: 37.5665, lon: 126.9780, message: "Seoul could see a 1.1 meter rise by 2070! 🌊", color: "#33c1ff" }
-];
+        // Sample Data for top 20 countries by emissions
+        const countries = {
+            "USA": { emissions: 5000, coords: [37.1, -95.7], color: "#ff5733" },
+            "China": { emissions: 10000, coords: [35.0, 105.0], color: "#33c1ff" },
+            "India": { emissions: 3000, coords: [20.6, 78.9], color: "#33ff57" },
+            "Russia": { emissions: 2000, coords: [60.0, 100.0], color: "#ff33e1" },
+            "Japan": { emissions: 1200, coords: [36.2, 138.3], color: "#e833ff" },
+            "Germany": { emissions: 900, coords: [51.1, 10.4], color: "#ffdd33" },
+            "Iran": { emissions: 800, coords: [32.0, 53.0], color: "#33ffae" },
+            "South Korea": { emissions: 600, coords: [35.9, 127.7], color: "#3399ff" },
+            "Canada": { emissions: 700, coords: [56.1, -106.3], color: "#ff338f" },
+            "Indonesia": { emissions: 1500, coords: [-0.79, 113.92], color: "#ff5733" },
+            "Brazil": { emissions: 1600, coords: [-14.23, -51.92], color: "#33ff57" },
+            "Mexico": { emissions: 1200, coords: [23.0, -102.0], color: "#33c1ff" },
+            "UK": { emissions: 1100, coords: [55.0, -4.0], color: "#ff338f" },
+            "France": { emissions: 1300, coords: [46.6, 1.0], color: "#337fff" },
+            "Australia": { emissions: 1700, coords: [-25.0, 135.0], color: "#ff5733" },
+            "Italy": { emissions: 800, coords: [41.9, 12.6], color: "#33ff57" },
+            "Turkey": { emissions: 1300, coords: [39.0, 35.0], color: "#ff5733" },
+            "Saudi Arabia": { emissions: 600, coords: [23.8, 45.5], color: "#3399ff" },
+            "Thailand": { emissions: 700, coords: [15.0, 100.0], color: "#ff338f" },
+            "South Africa": { emissions: 900, coords: [-30.5, 22.0], color: "#337fff" },
+            "Spain": { emissions: 800, coords: [40.5, -3.7], color: "#ff9933" }
+        };
 
-    // Add circles as markers to the map
-    seaLevelData.forEach(location => {
-      L.circle([location.lat, location.lon], {
-        color: location.color,
-        fillColor: location.color,
-        fillOpacity: 0.5,
-        radius: 500000 // Adjust radius for the size of the circle
-      })
-      .addTo(map)
-      .bindPopup(`<strong>${location.name}</strong><br>${location.message}`);
-    });
-  </script>
+        // Function to determine marker size based on emissions
+        function getMarkerSize(emissions) {
+            return Math.min(emissions / 100, 50); // Size for better visibility
+        }
+
+        // Adding countries to the map
+        for (const country in countries) {
+            const { emissions, coords, color } = countries[country];
+            const marker = L.circleMarker(coords, {
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.5,
+                radius: getMarkerSize(emissions) // Adjusted size for better visibility
+            }).addTo(map);
+            marker.bindPopup(`<strong>${country}</strong><br>Emissions: ${emissions} Mt CO2<br><button onclick="showCountryInfo('${country}')">Explore</button>`);
+        }
+
+        // Show country info and sliders
+        function showCountryInfo(country) {
+            document.getElementById('country-name').innerText = country;
+            document.getElementById('slider-container').classList.remove('hidden');
+            document.getElementById('summary').classList.add('hidden');
+            const selectedCountry = countries[country];
+            // Here you could set sliders to specific values based on the country if needed
+        }
+
+        // Show summary of choices
+        document.getElementById('summary-btn').onclick = function () {
+            const greenFarming = document.getElementById('green-farming').value;
+            const fossilFuels = document.getElementById('fossil-fuels').value;
+            const renewableEnergy = document.getElementById('renewable-energy').value;
+
+            let summary = `<h3>Summary for ${document.getElementById('country-name').innerText}</h3>`;
+            summary += `<p>🌱 Green Farming: ${greenFarming}%</p>`;
+            summary += `<p>⛽ Fossil Fuels: ${fossilFuels}%</p>`;
+            summary += `<p>☀️ Renewable Energy: ${renewableEnergy}%</p>`;
+            summary += `<p>Your choices can help protect our planet!</p>`;
+
+            // Suggestions based on choices
+            const suggestions = [];
+            if (greenFarming < 50) {
+                suggestions.push("🌾 Try to use more green farming! It helps plants grow better and keeps the air clean.");
+            }
+            if (fossilFuels > 50) {
+                suggestions.push("🚫 Use fewer fossil fuels! They pollute the air and make our planet warmer.");
+            }
+            if (renewableEnergy < 50) {
+                suggestions.push("💡 Use more renewable energy like solar or wind! They are clean and won't run out.");
+            }
+
+            // Impact of choices
+            const impact = `By making these changes, you can help reduce pollution and make the Earth a happier place! 🌍✨`;
+
+            document.getElementById('summary').innerHTML = summary + '<div class="suggestions">' + suggestions.join('<br>') + '</div>' + '<div class="impact">' + impact + '</div>';
+            document.getElementById('slider-container').classList.add('hidden');
+            document.getElementById('summary').classList.remove('hidden');
+        };
+    </script>
 </body>
 </html>
