@@ -1,21 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sea Level Rise Map Game</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sea Level Rise Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #e0f7fa;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+    }
+    .leaflet-popup-content {
+      text-align: center;
+      color: #00796b;
+      font-size: 1.2em;
+    }
+  </style>
 </head>
 <body>
+  <div id="map"></div>
 
-<h1>Sea Level Rise Map Game!</h1>
-<div id="map" style="height: 600px;"></div>
-<div id="info" class="info-container"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Initialize the map centered on a location with a suitable zoom level
+    const map = L.map('map').setView([20, 0], 2); // Centered and zoomed out to show all markers
 
-<!-- Leaflet JavaScript -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="script.js"></script>
+    // Add a tile layer (background)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Sample Data for COGs including Saudi Arabia
+    const seaLevelData = [
+      { name: "Los Angeles", lat: 34.0522, lon: -118.2437, message: "In 2050, sea levels might rise here by 1 meter! 🌊", color: "#ff5733" },
+      { name: "New York City", lat: 40.7128, lon: -74.0060, message: "In 2100, sea levels could rise by 2 meters! 🌊", color: "#33c1ff" },
+      { name: "Miami", lat: 25.7617, lon: -80.1918, message: "Miami could see a 1.5 meter rise by 2070! 🌊", color: "#33ff57" },
+      { name: "Bangkok", lat: 13.7563, lon: 100.5018, message: "Bangkok may face a 1.2 meter sea-level rise by 2060! 🌊", color: "#ff33e1" },
+      { name: "Jakarta", lat: -6.2088, lon: 106.8456, message: "Jakarta may see 1.8 meters of sea level rise by 2080! 🌊", color: "#e833ff" },
+      { name: "Sydney", lat: -33.8688, lon: 151.2093, message: "Sydney could experience a 1.5 meter rise by 2070! 🌊", color: "#ffdd33" },
+      { name: "Tokyo", lat: 35.6762, lon: 139.6503, message: "Tokyo might experience a 1 meter rise by 2050! 🌊", color: "#33ffae" },
+      { name: "Riyadh", lat: 24.7136, lon: 46.6753, message: "Sea level rise could affect Riyadh by 2100! 🌊", color: "#3399ff" }
+    ];
+
+    // Add circles as markers to the map
+    seaLevelData.forEach(location => {
+      L.circle([location.lat, location.lon], {
+        color: location.color,
+        fillColor: location.color,
+        fillOpacity: 0.5,
+        radius: 500000 // Adjust radius for the size of the circle
+      })
+      .addTo(map)
+      .bindPopup(`<strong>${location.name}</strong><br>${location.message}`);
+    });
+  </script>
 </body>
 </html>
